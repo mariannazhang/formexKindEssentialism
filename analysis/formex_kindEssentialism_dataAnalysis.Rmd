@@ -1,0 +1,369 @@
+---
+title: "The effect of formal explanations on kindhood and essentialism"
+author: "Marianna Zhang (marianna.zhang@stanford.edu) & Ellen M. Markman"
+date: "`r format(Sys.time(), '%B %d, %Y')`"
+output:
+  pdf_document:
+    toc: yes
+    toc_depth: '3'
+  html_document:
+    toc: yes
+    toc_depth: 3
+    toc_float:
+      collapsed: no
+---
+
+```{r "knitr config", cache = FALSE}
+require("knitr")
+```
+
+
+```{r setup}
+#### Load relevant libraries and functions
+library(Hmisc)
+library(tidyverse)
+library(broom)
+library(paramtest)  # power analysis
+library(lmerTest)   # linear mixed effects model
+library(brms)       # Bayesian mixed effects model
+library(tidybayes)  # Bayes factor
+library(gridExtra)  # side by side plots
+```
+
+```{r}
+# Set visualization theme
+theme_set(
+  ggthemes::theme_few() +
+  theme(text = element_text(size = 16)) # large text size for presentation figures
+)
+```
+
+## Introduction
+
+Universally, people impose structure on the world by grouping individual things into categories. Categorization is a universal and powerful cognitive tool that allows us to group various individual things together and treat the individuals as the same in some respect. Our ability to categorize allows us to generalize beyond our immediate experience as to make inductive inferences about other category members we have never experienced. 
+
+The way we represent many categories is shaped by psychological essentialism, the belief that category members share an innate, internal, and unchangeable "essence" that causes them to be fundamentally similar to each other and different from non-category members, and that gives rise to shared obvious and non-obvious properties (Gelman 2003). As a result, certain categories are construed as representing real distinctions in the world. For an example, an essentialist conception of gender might hold that men and women have different essences that make men all alike in some respect, women all alike in some respect, and men and women different from each other. Moreover, these essences are thought to remain unchanging and stable over time, such that men will always be men, and will always be characterized by certain properties, and that women will always be women, and will always be characterized by certain other properties. Essentialism is psychologically powerful, since it facilitates inferences across an entire category to category members that you have never experienced before. Essentialism enables one to infer that other category members will possess the same essence, that they will be similar to members you have seen and dissimilar from non-category members, and that they will possess certain obvious and non-obvious properties. 
+
+Although psychologically powerful and pervasive, essentialism is a cognitive heuristic that can lead to pernicious consequences, especially in the social domain, where it can lead to stereotyping and prejudice (Haslam, Rothschild, Ernst, 2002). Essentialism about gender leads to the belief that gender is a biologically fixed, unchangeable category with strictly defined boundaries, and are associated with prejudice against gay and transgender people.
+Essentialism has been widely documented in both children and adults in both biological and social domains (Gelman 2003). However, there is substantial cultural variation in what particular social categories are essentialized. For an example, essentialism about race differs across communities within the United States (Rhodes & Gelman 2009). Cultural variation in what categories are essentialized suggests that essentialism is the product of a general cognitive heuristic towards essentialism and social cues about what categories to essentialize. In particular, subtle cues in language that guide children to essentialized particular categories have been a topic of much research in the field. 
+
+One type of linguistic cue for essentialism is generic statements, such as "girls play with dolls" or "a girl plays with dolls", which have been shown to elicit essentialism in both biological and social domains (Gelman et al., 2010; Rhodes, Leslie, Tworek, 2012). There is not a single syntactic marker that reliably indicates that a statement is generic - rather, whether a statement is interpreted generically involves a combination of morphosyntactic cues, background knowledge about the predicate and the category, and the physical and social context (Cimpian & Markman, 2008; Cimpian, Meltzer, & Markman, 2011). A generic statement elicits essentialism by suggesting that there is a category-based explanation for why the category members have a certain property, and by suggesting that the property is a non-accidental and central property for that category (Cimpian & Markman 2009/2011). 
+Recently, formal explanations have been suggested as another cue for essentialism. Formal explanations explain why an individual has a certain property by reference to the category it belongs to, such as "Suzy plays with dolls because Suzy is a girl" (Prasada & Dillingham 2006/2009). Formal explanations explain that an individual has some property because it is a member of a particular category. Formal explanations may be a cue for essentialism, because of two effects that they have. First, formal explanations suggest that property is central to what it means to be a category member, e.g. that playing with dolls is central to what it means to be a girl (Prasada & Dillingham 2006/2009). Second, formal explanations suggest that there is something inherent about being a category member that gives rise to category members possessing that property, e.g. that there is something inherent about being a girl that causes girls to play with dolls (Gelman, Cimpian, Roberts, 2018). As a result, hearing a formal explanation may be a cue to essentialize the category mentioned in the explanation.  
+
+Muradoglu et al 2019 found that formal explanations do indeed boost essentialism for known animal categories, and perhaps for gender as well. Muradoglu et al, submitted contains two studies, one about animal categories, and the other about gender categories. In the first study about animal categories, 5 and 6-year-olds either heard a formal explanation of a novel behavioral property of a known animal category (e.g. "It likes to sleep standing up. because it's a giraffe"), or a control statement (e.g. "It's a giraffe. and it likes to sleep standing up."). Participants then were measured on 3 measures of essentialism: stability over time, mutability, and inductive potential. In the first study about animal categories, there was a main effect of explanation, such that 5 and 6-year-olds who heard the formal explanation had higher measures of essentialism than those who heard the control statement. The second study was similar to the first, but involved gender categories. 5 and 6-year olds either heard a formal explanation of a novel behavioral property of a certain gender (e.g. "Margaret likes to eat gooseberries because she is a girl."), or a control statement (e.g. "Margaret is a girl, and she likes to eat gooseberries."), before being tested on the same 3 measures of essentialism. Contrary to expectations, there was no main effect of explanation. There was an unanticipated interaction between explanation and age, such that the 6-year-olds who heard the formal explanation had higher essentialism measures than the 6-year-olds who heard the control statement, and the 5-year-olds had the same measure of essentialism for both explanations. Muradoglu et al conclude that formal explanations may be a cue for essentialism at age 5 for animal categories and starting at age 6 for gender. 
+
+Do formal explanations always cue essentialism? Previous studies have suggested that formal explanations always yield an intrinsic essentialist interpretation - formal explanations suggest that there is something inherent about being a category member that gives rise to the property (Gelman, Cimpian, Roberts, 2018), or uniquely identify properties that are central to what it means to be a category member (Prasada & Dillingham, 2009). 
+
+However, sometimes formal explanations seem to yield not an essentialist interpretation, but a structural interpretation. For example, "Smith changed her last name after she got married because she's a woman" and "I walk in groups late at night because I'm a woman", are formal explanations that sound apt and natural, yet we do not infer that there is something intrinsic about being a woman that caused Smith to change her last name, or that causes the speaker to walk in groups late at night. Rather, these formal explanations seem to highlight that there structural factors at play. Structural factors are stable extrinsic factors that act on a category by virtue of where the category is situated within a larger structure (Haslanger, 2016). For an example, these formal explanations highlight that there are stable social attitudes that women in our society face, which are due to the role women occupy in society, rather than something inherent or essential about women themselves. As a result, formal explanations may sometimes be interpreted as an expression of structural factors acting on a category, rather than something inherent or essential about a category. 
+
+Like generics (Noyes & Keil, 2019), formal explanations may signal that the category is a richly structured kind, but may support multiple interpretations, of which only one is essentialist. As a result, formal explanations may more strongly cue kindhood than essentialism. 
+
+This project's [repository](https://github.com/mariannazhang/formexKindEssentialism) and [preregistration](https://osf.io/jrfpv/) can be found online. 
+
+
+## Methods
+
+
+### Power Analysis
+Prior studies on the effects of linguistic statements on kindhood and essentialism have used n = 50 per cell (n = 100 total in Noyes & Keil, 2019). 
+
+We chose to run n = 150 adults, which is n = 50 in each of the 3 conditions in this study. 
+
+### Planned Sample
+
+<!-- Planned sample size and/or termination rule, sampling frame, known demographics if any, preselection rules if any.-->
+
+Planned sample size is n = 150 adults recruited on Amazon Mechanical Turk. MTurk participants will be required to be located within the United States, and will be required to have a HIT acceptance rate of 98% or above. MTurk participants will be paid 58 cents (3.5 minutes * $10/hr). 
+
+### Materials
+The adult survey paradigm was created in Qualtrics from the original Noyes & Keil, 2019 study 1 Qualtrics paradigm. The adult survey paradigm can be found in the project folder under materials. 
+
+### Procedure	
+Participants will be randomly assigned to one of 3 conditions: formal explanations, generics, or specific control statements. 
+
+Participants will receive 3 measures of kindhood and 4 measures of essentialism, with the order of kind and essentialism measures counterbalanced. 
+
+
+### Analysis Plan
+
+<!-- data cleaning rules, data exclusion rules, covariates, etc. Key analysis of interest. Can also pre-specify additional analyses you plan to do.-->
+
+
+#### Exclusion criteria
+Adult participants will be excluded for failing the attention check. 
+
+#### Analysis of interest
+The analysis of interest will be a linear mixed effects model, with condition (formal explanation, generic, specific), measure (kind, essence), and their interaction, with participant as a random intercept.
+
+We predict that hearing a formal explanation, relative to hearing a specific control statement, will increase ratings of kindhood more so than ratings of essentialism.
+
+
+
+### Methods Addendum (Post Data Collection)
+
+```{r import-data}
+#### Import data for analysis
+df.data <- read_csv("../data/formex_kindEssentialism_data.csv")
+```
+
+```{r clean}
+# Filter out those who didn't consent
+df.data <- df.data %>%
+  filter(Consent == "I do consent to participate") %>% 
+  select(-Consent)
+
+# Add participant ID
+df.data <- df.data %>% 
+  mutate(participant = row_number())
+
+# Keep columns we care about
+df.data <- df.data %>% 
+  rename(test_date = RecordedDate) %>% 
+  select(test_date,
+         participant, 
+         location,
+         condition, cb,
+         inherentSimilarity, hetereogeneous, inductivePotential, 
+         internalCause, invented, constructedBoundary, immutability,
+         attentionCheck,
+         age:ed) 
+
+# Remove line breaks in responses
+df.data$inductivePotenial <- df.data$inductivePotenial %>% 
+  str_replace_all("\n", " ")
+
+
+
+
+
+
+
+# Convert age to number
+df.data$age <- df.data$age %>% 
+  as.numeric()
+```
+
+
+```{r exclusion}
+#### Data exclusion / filtering
+# Record exclusions: experimentor error, age
+df.excl <- df.data %>% 
+  summarize(attentionCheck = sum(attentionCheck != "Learning about Zarpies and answering multiple choice questions about them"))
+
+# Exclude subjects and remove exclusion columns
+df.data <- df.data %>% 
+  filter(attentionCheck == "Learning about Zarpies and answering multiple choice questions about them") %>% 
+  select(-attentionCheck)
+  
+```
+
+#### Actual Sample
+
+```{r sample-size}
+n.adults <- df.data %>% 
+  nrow()
+n.adults.condition <- df.data %>% 
+  count(condition)
+```
+
+We ran n=150 adults. After exclusion criteria, we retained n=`r n.adults`. 
+
+```{r dem}
+#### Demographics
+# Age
+df.dem_age <- df.data %>%
+  count(age_cat)
+
+# Gender
+df.dem_gender <- df.data %>%
+  count(gender)
+
+# Race
+df.dem_race <- df.data %>%
+  count(race)
+
+# Ed
+df.dem.adults_ed <- df.data.adults %>%
+  count(ed)
+```
+
+
+
+## Results
+
+
+### Data preparation
+
+Data preparation as specified in the analysis plan.
+
+
+```{r recoding-tidying}
+# Recode kind measures
+df.data$inherentSimilarity <- df.data$inherentSimilarity %>% 
+  recode("Totally Disagree" = 0,
+         "Mostly Disagree" = 0.2,
+         "Slightly Disagree" = 0.4,
+         "Slightly Agree" = 0.6,
+         "Mostly Agree" = 0.8,
+         "Totally Agree" = 1)
+
+
+df.data$hetereogenous <- df.data$hetereogenous %>% 
+  # reversed
+  recode("Totally Disagree" = 1,
+         "Mostly Disagree" = 0.8,
+         "Slightly Disagree" = 0.6,
+         "Slightly Agree" = 0.4,
+         "Mostly Agree" = 0.2,
+         "Totally Agree" = 0)
+
+df.data$inductivePotential <- df.data$inductivePotential %>% 
+  recode("Totally Disagree" = 0,
+         "Mostly Disagree" = 0.2,
+         "Slightly Disagree" = 0.4,
+         "Slightly Agree" = 0.6,
+         "Mostly Agree" = 0.8,
+         "Totally Agree" = 1)
+
+
+# Recode essentialism measures
+df.data$internalCause <- df.data$internalCause %>% 
+  recode("Totally Disagree" = 0,
+         "Mostly Disagree" = 0.2,
+         "Slightly Disagree" = 0.4,
+         "Slightly Agree" = 0.6,
+         "Mostly Agree" = 0.8,
+         "Totally Agree" = 1)
+
+df.data$invented <- df.data$invented %>% 
+  # reversed
+  recode("Totally Disagree" = 1,
+         "Mostly Disagree" = 0.8,
+         "Slightly Disagree" = 0.6,
+         "Slightly Agree" = 0.4,
+         "Mostly Agree" = 0.2,
+         "Totally Agree" = 0)
+
+df.data$constructedBoundary <- df.data$constructedBoundary %>% 
+  # reversed
+  recode("Totally Disagree" = 1,
+         "Mostly Disagree" = 0.8,
+         "Slightly Disagree" = 0.6,
+         "Slightly Agree" = 0.4,
+         "Mostly Agree" = 0.2,
+         "Totally Agree" = 0)
+
+df.data$immutability <- df.data$immutability %>% 
+  recode("Totally Disagree" = 0,
+         "Mostly Disagree" = 0.2,
+         "Slightly Disagree" = 0.4,
+         "Slightly Agree" = 0.6,
+         "Mostly Agree" = 0.8,
+         "Totally Agree" = 1)
+
+
+
+# Gather to tidy long form
+df.tidy <- df.data %>% 
+  gather(question, response, "inherentSimilarity":"immutability") %>% 
+  mutate(measure = ifelse(question == "inherentSimilarity" | question == "hetereogenous" | question == "inductivePotential", "kind", "essentialism"))
+
+
+# Calculate overall essentialism measure per subject
+df.subj <- df.tidy %>% 
+  group_by(subject, condition, measure) %>% 
+  summarize(response = mean(response, na.rm = TRUE))
+```
+
+### Descriptive analysis
+```{r}
+# Overall essentialism measure across subjects by condition
+df.means <- df.subj %>%
+  group_by(condition, measure) %>% 
+  summarize(avg = mean(response, na.rm = TRUE),
+            sd = sd(response, na.rm = TRUE), 
+            n = length(unique(participant)))
+df.means
+```
+
+
+```{r vis-all}
+# response by measure and condition
+ggplot(df.subj, aes(x = measure, y = response, fill = condition, color = condition)) +
+  geom_point(position = position_jitterdodge(jitter.width = 0.2, dodge.width = 0.8),
+             alpha = 0.3) +
+  stat_summary(fun.data = "mean_cl_boot",
+               position = position_dodge(width = 0.8),
+               geom = "linerange",
+               size = 1) +
+  stat_summary(fun.y = "mean",
+               position = position_dodge(width = 0.8),
+               geom = "point",
+               shape = 21,
+               color = "black",
+               size = 3) +
+  scale_fill_brewer(palette = "Set1") +
+  scale_y_continuous(limits = c(0, 1))
+ggsave("formex_kindEssentialism.png", width = 7, height = 7)
+```
+
+### Target analysis
+
+The analyses as specified in the analysis plan. 
+
+```{r lmer-data-analysis}
+# linear mixed effects model: response as a function of condition, measure, their interaction, with random intercept for participant
+lmer(response ~ condition * measure + (1|participant), df.tidy) %>% 
+  summary()
+```
+
+### Exploratory analysis
+```{r Bayesian-data-analysis}
+# build Bayesian model for condition * measure interaction
+fit.brm <- brm(
+  condition * measure + (1|participant), df.tidy,
+  save_all_pars = T,
+  file = "fit.brm")
+fit.brm %>% summary()
+
+# posterior probability of interaction
+post <- hypothesis(fit.brm,
+           hypothesis = "condition:measure > 0")$hypothesis$Post.Prob
+post
+
+# build compact Bayesian model for no interaction
+fit.brm.compact <- brm(
+  condition + (1|participant), df.tidy,
+  save_all_pars = T,
+  file = "fit.brm.compact")
+
+## Bayes factor for null vs difference between conditions
+bf <- bayes_factor(fit.brm, fit.brm.compact)$bf
+bf
+```
+
+```{r DVs}
+# DVs by condition
+ggplot(df.tidy, aes(x = measure, y = response, fill = condition, color = condition)) +
+  facet_grid(question) +
+  geom_point(position = position_jitterdodge(jitter.width = 0.2, jitter.height = 0.02, dodge.width = 0.8),
+             alpha = 0.3) + 
+  stat_summary(fun.data = "mean_cl_boot",
+               position = position_dodge(width = 0.8),
+               geom = "linerange",
+               size = 1) +
+  stat_summary(fun.y = "mean",
+               position = position_dodge(width = 0.8),
+               geom = "point",
+               shape = 21,
+               color = "black",
+               size = 4) +
+  scale_fill_brewer(palette = "Set1") +
+  scale_y_continuous(limits = c(0, 1))
+ggsave("formex_kindEssentialism_DV.png", height = 8, width = 10)
+```
+
+## Discussion
+
+
+
