@@ -107,10 +107,14 @@ df.data <- read_csv("../data/formex_kindEssentialism_data.csv")
 ```
 
 ```{r clean}
+# Remove Qualtrics header rows
+df.data <- df.data %>% 
+  slice(-1:-2)
+
 # Filter out those who didn't consent
 df.data <- df.data %>%
-  filter(Consent == "I do consent to participate") %>% 
-  select(-Consent)
+  filter(consent == "I do consent to participate") %>% 
+  select(-consent)
 
 # Add participant ID
 df.data <- df.data %>% 
@@ -118,29 +122,26 @@ df.data <- df.data %>%
 
 # Keep columns we care about
 df.data <- df.data %>% 
-  rename(test_date = RecordedDate) %>% 
+  rename(test_date = RecordedDate,
+         heterogeneous = hetereogenous) %>% 
   select(test_date,
          participant, 
-         location,
          condition, cb,
-         inherentSimilarity, hetereogeneous, inductivePotential, 
-         internalCause, invented, constructedBoundary, immutability,
+         inherentSimilarity:immutability,
          attentionCheck,
-         age:ed) 
+         age:education)
 
-# Remove line breaks in responses
-df.data$inductivePotenial <- df.data$inductivePotenial %>% 
-  str_replace_all("\n", " ")
+# Factorize variables
+df.data$condition <- df.data$condition %>% 
+  factor(levels = c("generic", "formal", "control"))
 
-
-
-
-
-
-
-# Convert age to number
-df.data$age <- df.data$age %>% 
-  as.numeric()
+df.data$education <- df.data$education %>% 
+  factor(levels = c("Less than high school",
+                    "High school/GED",
+                    "Some college", 
+                    "Bachelor's (B.A., B.S.)", 
+                    "Master's (M.A., M.S.)",
+                    "Doctoral (Ph.D., J.D., M.D.)"))
 ```
 
 
@@ -166,13 +167,13 @@ n.adults.condition <- df.data %>%
   count(condition)
 ```
 
-We ran n=150 adults. After exclusion criteria, we retained n=`r n.adults`. 
+We ran n=150 adults. After exclusion criteria, we retained n=`r n.adults`: n=`r n.adults.condition$n[1]` in the generic condition, n=`r n.adults.condition$n[2]` in the formal explanation condition, and n=`r n.adults.condition$n[3]` in the specific control condition. 
 
 ```{r dem}
 #### Demographics
 # Age
 df.dem_age <- df.data %>%
-  count(age_cat)
+  count(age)
 
 # Gender
 df.dem_gender <- df.data %>%
@@ -183,8 +184,8 @@ df.dem_race <- df.data %>%
   count(race)
 
 # Ed
-df.dem.adults_ed <- df.data.adults %>%
-  count(ed)
+df.dem_ed <- df.data %>%
+  count(education)
 ```
 
 
@@ -208,7 +209,7 @@ df.data$inherentSimilarity <- df.data$inherentSimilarity %>%
          "Totally Agree" = 1)
 
 
-df.data$hetereogenous <- df.data$hetereogenous %>% 
+df.data$heterogeneous <- df.data$heterogeneous %>% 
   # reversed
   recode("Totally Disagree" = 1,
          "Mostly Disagree" = 0.8,
@@ -266,12 +267,17 @@ df.data$immutability <- df.data$immutability %>%
 # Gather to tidy long form
 df.tidy <- df.data %>% 
   gather(question, response, "inherentSimilarity":"immutability") %>% 
-  mutate(measure = ifelse(question == "inherentSimilarity" | question == "hetereogenous" | question == "inductivePotential", "kind", "essentialism"))
+  mutate(measure = ifelse(question == "inherentSimilarity" | question == "heterogeneous" | question == "inductivePotential", "kind", "essentialism"))
+
+# Factorize question
+df.tidy$question <- df.tidy$question %>% 
+  factor(levels = c("inherentSimilarity", "heterogeneous", "inductivePotential", 
+                    "internalCause", "invented", "constructedBoundary", "immutability"))
 
 
-# Calculate overall essentialism measure per subject
+# Calculate overall essentialism measure per participant
 df.subj <- df.tidy %>% 
-  group_by(subject, condition, measure) %>% 
+  group_by(participant, condition, measure) %>% 
   summarize(response = mean(response, na.rm = TRUE))
 ```
 
@@ -288,10 +294,10 @@ df.means
 
 
 ```{r vis-all}
-# response by measure and condition
+# response (subject average) by measure and condition
 ggplot(df.subj, aes(x = measure, y = response, fill = condition, color = condition)) +
   geom_point(position = position_jitterdodge(jitter.width = 0.2, dodge.width = 0.8),
-             alpha = 0.3) +
+             alpha = 0.15) +
   stat_summary(fun.data = "mean_cl_boot",
                position = position_dodge(width = 0.8),
                geom = "linerange",
@@ -301,10 +307,24 @@ ggplot(df.subj, aes(x = measure, y = response, fill = condition, color = conditi
                geom = "point",
                shape = 21,
                color = "black",
-               size = 3) +
-  scale_fill_brewer(palette = "Set1") +
-  scale_y_continuous(limits = c(0, 1))
-ggsave("formex_kindEssentialism.png", width = 7, height = 7)
+               size = 4) 
+ggsave("formex_kindEssentialism_subj.png", width = 8, height = 5)
+
+# response (individual item responses) by measure and condition
+ggplot(df.tidy, aes(x = measure, y = response, fill = condition, color = condition)) +
+  geom_point(position = position_jitterdodge(jitter.width = 0.2, jitter.height = 0.025, dodge.width = 0.8),
+             alpha = 0.05) +
+  stat_summary(fun.data = "mean_cl_boot",
+               position = position_dodge(width = 0.8),
+               geom = "linerange",
+               size = 1) +
+  stat_summary(fun.y = "mean",
+               position = position_dodge(width = 0.8),
+               geom = "point",
+               shape = 21,
+               color = "black",
+               size = 4) 
+ggsave("formex_kindEssentialism.png", width = 8, height = 5)
 ```
 
 ### Target analysis
@@ -312,42 +332,84 @@ ggsave("formex_kindEssentialism.png", width = 7, height = 7)
 The analyses as specified in the analysis plan. 
 
 ```{r lmer-data-analysis}
-# linear mixed effects model: response as a function of condition, measure, their interaction, with random intercept for participant
-lmer(response ~ condition * measure + (1|participant), df.tidy) %>% 
+# linear mixed effects model: formal vs control
+# response as a function of condition (formal vs control), measure (kind vs essentialism), their interaction, with random intercept for participant
+lmer(response ~ condition * measure + (1|participant), 
+     df.tidy %>% filter(condition == "formal" | condition == "control")) %>% 
+  summary()
+
+
+
+# linear mixed effects model: formal vs control: kind
+# response as a function of condition (formal vs control), with random intercept for participant
+lmer(response ~ condition + (1|participant), 
+     df.tidy %>% filter(condition == "formal" | condition == "control", measure == "kind")) %>%
+  summary()
+
+# linear mixed effects model: formal vs control: essentialism
+# response as a function of condition (formal vs control), with random intercept for participant
+lmer(response ~ condition + (1|participant), 
+     df.tidy %>% filter(condition == "formal" | condition == "control", measure == "essentialism")) %>%
   summary()
 ```
 
 ### Exploratory analysis
+```{r lmer-data-analysis-replication}
+# Did we replicate the results from Noyes & Keil, 2019 study 1?
+
+# linear mixed effects model: generic vs control
+# response as a function of condition (formal vs control), measure (kind vs essentialism), their interaction, with random intercept for participant
+lmer(response ~ condition * measure + (1|participant), 
+     df.tidy %>% filter(condition == "generic" | condition == "control")) %>% 
+  summary()
+
+
+
+# linear mixed effects model: generic vs control: kind
+# response as a function of condition (formal vs control), with random intercept for participant
+lmer(response ~ condition + (1|participant), 
+     df.tidy %>% filter(condition == "generic" | condition == "control", measure == "kind")) %>%
+  summary()
+
+# linear mixed effects model: generic vs control: essentialism
+# response as a function of condition (formal vs control), with random intercept for participant
+lmer(response ~ condition + (1|participant), 
+     df.tidy %>% filter(condition == "generic" | condition == "control", measure == "essentialism")) %>%
+  summary()
+```
+
 ```{r Bayesian-data-analysis}
-# build Bayesian model for condition * measure interaction
+# build Bayesian model for condition * measure interaction: formal vs control
 fit.brm <- brm(
-  condition * measure + (1|participant), df.tidy,
+  response ~ condition * measure + (1|participant), 
+  df.tidy %>% filter(condition == "formal" | condition == "control"),
   save_all_pars = T,
   file = "fit.brm")
 fit.brm %>% summary()
 
 # posterior probability of interaction
 post <- hypothesis(fit.brm,
-           hypothesis = "condition:measure > 0")$hypothesis$Post.Prob
+           hypothesis = "conditioncontrol:measurekind < 0")$hypothesis$Post.Prob
 post
 
-# build compact Bayesian model for no interaction
+# build compact Bayesian model for no interaction: formal vs control
 fit.brm.compact <- brm(
-  condition + (1|participant), df.tidy,
+  response ~ condition + measure + (1|participant), 
+  df.tidy %>% filter(condition == "formal" | condition == "control"),
   save_all_pars = T,
   file = "fit.brm.compact")
 
-## Bayes factor for null vs difference between conditions
+## Bayes factor for null vs interaction
 bf <- bayes_factor(fit.brm, fit.brm.compact)$bf
 bf
 ```
 
 ```{r DVs}
 # DVs by condition
-ggplot(df.tidy, aes(x = measure, y = response, fill = condition, color = condition)) +
-  facet_grid(question) +
+ggplot(df.tidy, aes(x = 0, y = response, fill = condition, color = condition)) +
+  facet_wrap(~question) +
   geom_point(position = position_jitterdodge(jitter.width = 0.2, jitter.height = 0.02, dodge.width = 0.8),
-             alpha = 0.3) + 
+             alpha = 0.1) + 
   stat_summary(fun.data = "mean_cl_boot",
                position = position_dodge(width = 0.8),
                geom = "linerange",
@@ -358,9 +420,11 @@ ggplot(df.tidy, aes(x = measure, y = response, fill = condition, color = conditi
                shape = 21,
                color = "black",
                size = 4) +
-  scale_fill_brewer(palette = "Set1") +
-  scale_y_continuous(limits = c(0, 1))
-ggsave("formex_kindEssentialism_DV.png", height = 8, width = 10)
+  theme(axis.title.x = element_blank(),
+        axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(),
+        text = element_text(size = 16))
+ggsave("formex_kindEssentialism_DV.png", height = 6, width = 8)
 ```
 
 ## Discussion
