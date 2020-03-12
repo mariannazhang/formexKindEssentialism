@@ -65,21 +65,27 @@ This project's [repository](https://github.com/mariannazhang/formexKindEssential
 
 
 ### Power Analysis
-Prior studies on the effects of linguistic statements on kindhood and essentialism have used n = 50 per cell (n = 100 total in Noyes & Keil, 2019). 
-
-We chose to run n = 150 adults, which is n = 50 in each of the 3 conditions in this study. 
+Prior studies that have successfully detected effects of linguistic statements on kindhood and essentialism have used n = 50 per cell (n = 100 total in Noyes & Keil, 2019), so we chose to run n = 50 in each condition in the following studies as well.
 
 ### Planned Sample
 
 <!-- Planned sample size and/or termination rule, sampling frame, known demographics if any, preselection rules if any.-->
 
-Planned sample size is n = 150 adults recruited on Amazon Mechanical Turk. MTurk participants will be required to be located within the United States, and will be required to have a HIT acceptance rate of 98% or above. MTurk participants will be paid 58 cents (3.5 minutes * $10/hr). 
+Planned sample size is n = 50 per condition adults recruited on Amazon Mechanical Turk. We planned to run n = 150 for Exp 1a (formal explanations on kind and essentialism - pics, no proper names), n = 150 for Exp 1b (formal explanations on kind and essentalism - no pics, proper names), and n = 300 for Exp 2 (formal explanations and property type on kind and essentialism).  
+
+MTurk participants will be required to be located within the United States, and will be required to have a HIT acceptance rate of 98% or above. MTurk participants will be paid 58 cents (3.5 minutes * $10/hr). 
 
 ### Materials
-The adult survey paradigm was created in Qualtrics from the original Noyes & Keil, 2019 study 1 Qualtrics paradigm. The adult survey paradigm can be found in the project folder under materials. 
+Exp 1a was directly created in Qualtrics from the original Noyes & Keil, 2019 study 1 Qualtrics paradigm, with the addition of an attention check. Exp 1b was adapted from Exp 1a but with pictures removed and novel proper names inserted for the formal explanation and control conditions to resolve referential ambiguity caused by removing the pictures, plus an additional attention check since engaging picture stimuli were removed. 
+
+Exp 2 was adapted from 1b but with properties directly borrowed from Noyes & Keil, 2019 study 2. 
+
+Survey paradigms can be found in the project folder under materials. 
 
 ### Procedure	
-Participants will be randomly assigned to one of 3 conditions: formal explanations, generics, or specific control statements. 
+In Exp 1a and 1b, participants will be randomly assigned to one of 3 conditions: formal explanations, generics, or control (specific) statements. 
+
+In Exp 2, participants will be randomly assigned to one of 3 statement conditions - formal explanations, generics, or control (specific) statements - as well as one of 2 property conditions - biological or cultural. 
 
 Participants will receive 3 measures of kindhood and 4 measures of essentialism, with the order of kind and essentialism measures counterbalanced. 
 
@@ -90,45 +96,62 @@ Participants will receive 3 measures of kindhood and 4 measures of essentialism,
 
 
 #### Exclusion criteria
-Adult participants will be excluded for failing the attention check. 
+Adult participants will be excluded for failing the attention check(s). 
 
 #### Analysis of interest
-The analysis of interest will be a linear mixed effects model, with condition (formal explanation, generic, specific), measure (kind, essence), and their interaction, with participant as a random intercept.
+In Exp 1a and 1b, the analysis of interest will be a linear mixed effects model, with condition (formal explanation, generic, specific), measure (kind, essence), and their interaction, with participant as a random intercept.
 
 We predict that hearing a formal explanation, relative to hearing a specific control statement, will increase ratings of kindhood more so than ratings of essentialism.
 
+In Exp 2, the analysis of interest will be a linear mixed effects model, with condition (formal explanation, generic, specific), property (biological, cultural), measure (kind, essence), and their interactions, with participant as a random intercept.
+
+We predict that hearing a formal explanation (relative to hearing a specific control statement) increase essentialism more when the property is biological than when the property is cultural. 
 
 
 ### Methods Addendum (Post Data Collection)
 
 ```{r import-data}
 #### Import data for analysis
-df.data <- read_csv("../data/formex_kindEssentialism_data.csv")
+df.data.pics <- read_csv("../data/formex_kindEssentialism_data.csv")
+df.data.noPics <- read_csv("../data/formex_kindEssentialism_noPics_data.csv")
 ```
 
 ```{r clean}
-# Remove Qualtrics header rows
-df.data <- df.data %>% 
-  slice(-1:-2)
-
-# Filter out those who didn't consent
-df.data <- df.data %>%
+# Remove Qualtrics header rows, filter out those who didn't consent, add participant ID
+df.data.pics <- df.data.pics %>% 
+  slice(-1:-2) %>% 
   filter(consent == "I do consent to participate") %>% 
-  select(-consent)
-
-# Add participant ID
-df.data <- df.data %>% 
+  select(-consent) %>% 
   mutate(participant = row_number())
+
+df.data.noPics <- df.data.noPics %>% 
+  slice(-1:-2) %>% 
+  filter(consent == "I do consent to participate") %>% 
+  select(-consent) %>% 
+  mutate(participant = row_number())
+
+# Mark data source, combine data
+df.data.pics <- df.data.pics %>% 
+  mutate(data_group = "pictures, no names")
+df.data.noPics <- df.data.noPics %>% 
+  mutate(data_group = "no pictures, proper names")
+
+df.data <- bind_rows(
+  df.data.pics, 
+  df.data.noPics)
+  
 
 # Keep columns we care about
 df.data <- df.data %>% 
   rename(test_date = RecordedDate,
          heterogeneous = hetereogenous) %>% 
-  select(test_date,
+  select(data_group,
+         test_date,
          participant, 
          condition, cb,
          inherentSimilarity:immutability,
          attentionCheck,
+         attentionCheck2,
          age:education)
 
 # Factorize variables
@@ -147,14 +170,32 @@ df.data$education <- df.data$education %>%
 
 ```{r exclusion}
 #### Data exclusion / filtering
-# Record exclusions: experimentor error, age
+# Record exclusions: attention check
 df.excl <- df.data %>% 
+  group_by(data_group) %>% 
   summarize(attentionCheck = sum(attentionCheck != "Learning about Zarpies and answering multiple choice questions about them"))
 
-# Exclude subjects and remove exclusion columns
-df.data <- df.data %>% 
-  filter(attentionCheck == "Learning about Zarpies and answering multiple choice questions about them") %>% 
-  select(-attentionCheck)
+
+# # Filter on first attention check
+# df.data <- df.data %>% 
+#   filter(attentionCheck == "Learning about Zarpies and answering multiple choice questions about them")
+# 
+# # Function to convert numeric list attn_check value to boolean
+# check_pass <- function(str_num_list, min_req, ans_list) {
+#   num_list <- strsplit(str_num_list, ",")
+#   num_list <- as.numeric(unlist(num_list))
+#   return(length(intersect(num_list, ans_list)) >= min_req)
+# }
+# 
+# # Include participants who checked at least two numbers between 1 to 7 in attn_check column
+# df.data$pass_attentionCheck2 = apply(select(df.data, attentionCheck2), 1, check_pass, 2, 1:7)
+# df.data <- df.data %>%
+#   filter(df.data$pass_attentionCheck2 == TRUE)
+
+
+# Removing attenton check columns (no longer relevant)
+df.data <- df.data %>%
+  select(-attentionCheck, -attentionCheck2)
   
 ```
 
@@ -162,12 +203,17 @@ df.data <- df.data %>%
 
 ```{r sample-size}
 n.adults <- df.data %>% 
-  nrow()
+  count(data_group)
 n.adults.condition <- df.data %>% 
+  group_by(data_group) %>% 
   count(condition)
 ```
 
-We ran n=150 adults. After exclusion criteria, we retained n=`r n.adults`: n=`r n.adults.condition$n[1]` in the generic condition, n=`r n.adults.condition$n[2]` in the formal explanation condition, and n=`r n.adults.condition$n[3]` in the specific control condition. 
+In both experiments, we ran n=150 adults. 
+
+In experiment 1a (pictures, no proper names), after exclusion criteria, we retained n=`r n.adults$n[1]`: n=`r n.adults.condition$n[1]` in the generic condition, n=`r n.adults.condition$n[2]` in the formal explanation condition, and n=`r n.adults.condition$n[3]` in the specific control condition. 
+
+In experiment 1b (no pictures, proper names), after exclusion criteria, we retained n=`r n.adults$n[2]`: n=`r n.adults.condition$n[4]` in the generic condition, n=`r n.adults.condition$n[5]` in the formal explanation condition, and n=`r n.adults.condition$n[6]` in the specific control condition. 
 
 ```{r dem}
 #### Demographics
@@ -277,7 +323,7 @@ df.tidy$question <- df.tidy$question %>%
 
 # Calculate overall essentialism measure per participant
 df.subj <- df.tidy %>% 
-  group_by(participant, condition, measure) %>% 
+  group_by(data_group, participant, condition, measure) %>% 
   summarize(response = mean(response, na.rm = TRUE))
 ```
 
@@ -285,7 +331,7 @@ df.subj <- df.tidy %>%
 ```{r}
 # Overall essentialism measure across subjects by condition
 df.means <- df.subj %>%
-  group_by(condition, measure) %>% 
+  group_by(data_group, condition, measure) %>% 
   summarize(avg = mean(response, na.rm = TRUE),
             sd = sd(response, na.rm = TRUE), 
             n = length(unique(participant)))
@@ -296,6 +342,7 @@ df.means
 ```{r vis-all}
 # response (subject average) by measure and condition
 ggplot(df.subj, aes(x = measure, y = response, fill = condition, color = condition)) +
+  facet_grid(. ~ data_group) +
   geom_point(position = position_jitterdodge(jitter.width = 0.2, dodge.width = 0.8),
              alpha = 0.15) +
   stat_summary(fun.data = "mean_cl_boot",
@@ -308,10 +355,11 @@ ggplot(df.subj, aes(x = measure, y = response, fill = condition, color = conditi
                shape = 21,
                color = "black",
                size = 4) 
-ggsave("formex_kindEssentialism_subj.png", width = 8, height = 5)
+ggsave("formex_kindEssentialism_subj_comp.png", width = 8, height = 5)
 
 # response (individual item responses) by measure and condition
 ggplot(df.tidy, aes(x = measure, y = response, fill = condition, color = condition)) +
+  facet_grid(. ~ data_group) +
   geom_point(position = position_jitterdodge(jitter.width = 0.2, jitter.height = 0.025, dodge.width = 0.8),
              alpha = 0.05) +
   stat_summary(fun.data = "mean_cl_boot",
@@ -324,7 +372,7 @@ ggplot(df.tidy, aes(x = measure, y = response, fill = condition, color = conditi
                shape = 21,
                color = "black",
                size = 4) 
-ggsave("formex_kindEssentialism.png", width = 8, height = 5)
+ggsave("formex_kindEssentialism_comp.png", width = 8, height = 5)
 ```
 
 ### Target analysis
